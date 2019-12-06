@@ -3,33 +3,9 @@ library("AnnotationDbi")
 library("org.Vvinifera.eg.db")
 
 #My limma pipeline
+setwd("~/Documentos/Vitis_Meta_analysis")
 
-setwd("/home/rui/Documentos/Vitis_Meta_analysis/expression/htseq-count/")
-
-#Get list of all files in directory
-
-files <- list.files(path=".", pattern="_counts")
-
-#Merge the first to files and store
-file1 <- read.table(files[1], col.names=c("id",tools::file_path_sans_ext(files[1])))
-file2 <- read.table(files[2], col.names=c("id",tools::file_path_sans_ext(files[2])))
-out.file <- merge (file1, file2, by=c("id"))
-
-#For loop to merge contents of remaining files
-
-for(i in 3:length(files))
-{
-  file <-  read.table(files[i],col.names=c("id",tools::file_path_sans_ext(files[i])))
-  out.file <- merge(out.file, file, by=c("id"))
-}
-
-write.table(out.file, file = "htseq_all_sample_count.tsv",sep="\t", row.names = FALSE)
-
-out.file<-out.file[!grepl("__no_feature", out.file$id),]
-out.file<-out.file[!grepl("__ambiguous", out.file$id),]
-out.file<-out.file[!grepl("__too_low_aQual", out.file$id),]
-out.file<-out.file[!grepl("__not_aligned", out.file$id),]
-out.file<-out.file[!grepl("__alignment_not_unique", out.file$id),]
+out.file <- readRDS(file = "data/out.file.RDS")
 
 library("limma")
 library("edgeR")
@@ -43,7 +19,7 @@ colnames(counts_data) <- sub('_counts','',colnames(counts_data))
 
 # Load phenotype table, with RUN collum as row.names
 # Use read.delim insted of read.table, because read.table refused to read all the rows
-conditions <- read.delim("phenotype_global.tsv", sep = "\t", header = TRUE, row.names = 22, stringsAsFactors = F)
+conditions <- read.delim("expression/htseq-count/phenotype_global.tsv", sep = "\t", header = TRUE, row.names = 22, stringsAsFactors = F)
 
 pinot <- conditions[conditions$Vitis.Genotype == "Vitis vinifera Pinot Noir" & conditions$Tissue == "leaves",]
 

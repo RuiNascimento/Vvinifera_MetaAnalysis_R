@@ -26,3 +26,5 @@ out.file<-out.file[!grepl("__ambiguous", out.file$id),]
 out.file<-out.file[!grepl("__too_low_aQual", out.file$id),]
 out.file<-out.file[!grepl("__not_aligned", out.file$id),]
 out.file<-out.file[!grepl("__alignment_not_unique", out.file$id),]
+
+saveRDS(out.file, file = "../../data/out.file.RDS")
