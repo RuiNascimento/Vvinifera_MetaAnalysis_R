@@ -1,0 +1,19 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+# Images and data
+*.png
+*.tsv
+*.csv
+data/
+server/
+expression/
+ref_index/
+
+#Other stuff
+*.xml
+runs*.txt
+*.pdf
+nomes.txt

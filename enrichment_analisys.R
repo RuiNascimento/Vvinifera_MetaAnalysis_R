@@ -1,0 +1,92 @@
+########### GO  Enrichment analisys ##################
+
+library(topGO)
+library(KEGGREST)
+library(org.Vvinifera.eg.db)
+
+setwd("~/Documentos/Vitis_Meta_analysis")
+
+infile <- "expression/htseq-count/Plasmopara.tsv" 
+tmp <- read.delim(infile)
+
+# Create collumn with the geneID, from the rowname
+tmp$geneName <- substring(sub("\\,.+","",rownames(tmp)),8)
+
+# Codo for later, maybe
+# select(org.Vvinifera.eg.db, keys = as.character(tmp$geneName), columns = c("GENENAME", "SYMBOL", "ONTOLOGY"), keytype = "GID")
+
+# criar um objecto geneList com os valores de p.value e o nomes como Entrez Gene identifiers
+geneList <- tmp$P.Value
+names(geneList) <- tmp$geneName
+
+# Create topGOData object
+# Tive de modificar o org.Vvinifera.eg.db manualmente para funcionar
+GOdata <- new("topGOdata",
+              ontology = "BP",
+              allGenes = geneList,
+              geneSelectionFun = function(x)x,
+              annot = annFUN.org , mapping = "org.Vvinifera.eg.db",
+              ID = "entrez")
+
+resultKS <- runTest(GOdata, algorithm = "weight01", statistic = "ks")
+
+tab <- GenTable(GOdata, raw.p.value = resultKS, topNodes = length(resultKS@score), numChar = 120)
+
+head(tab, 15)
+
+par(cex = 0.6)
+showSigOfNodes(GOdata, score(resultKS), firstSigNodes = 5, useInfo = "def")
+par(cex = 1)
+
+############# KEGG PATHWAY ANALISYS ######################
+
+pathways.list <- keggList("pathway", "vvi")
+head(pathways.list)
+pathway.codes <- sub("path:", "", names(pathways.list))
+genes.by.pathway <- sapply(pathway.codes,
+                           function(pwid){
+                             pw <- keggGet(pwid)
+                             if (is.null(pw[[1]]$GENE)) return(NA)
+                             pw2 <- pw[[1]]$GENE[c(TRUE,FALSE)] # may need to modify this to c(FALSE, TRUE) for other organisms
+                             pw2 <- unlist(lapply(strsplit(pw2, split = ";", fixed = T), function(x)x[1]))
+                             return(pw2)
+                           }
+)
+head(genes.by.pathway)
+head(geneList)
+
+# Wilcoxon test for each pathway
+pVals.by.pathway <- t(sapply(names(genes.by.pathway),
+                             function(pathway) {
+                               pathway.genes <- genes.by.pathway[[pathway]]
+                               list.genes.in.pathway <- intersect(names(geneList), pathway.genes)
+                               list.genes.not.in.pathway <- setdiff(names(geneList), list.genes.in.pathway)
+                               scores.in.pathway <- geneList[list.genes.in.pathway]
+                               scores.not.in.pathway <- geneList[list.genes.not.in.pathway]
+                               if (length(scores.in.pathway) > 0){
+                                 p.value <- wilcox.test(scores.in.pathway, scores.not.in.pathway, alternative = "less")$p.value
+                               } else{
+                                 p.value <- NA
+                               }
+                               return(c(p.value = p.value, Annotated = length(list.genes.in.pathway)))
+                             }
+))
+
+# Assemble output table
+outdat <- data.frame(pathway.code = rownames(pVals.by.pathway))
+outdat$pathway.name <- pathways.list[outdat$pathway.code]
+outdat$p.value <- pVals.by.pathway[,"p.value"]
+outdat$Annotated <- pVals.by.pathway[,"Annotated"]
+outdat <- outdat[order(outdat$p.value),]
+head(outdat, 10)
+
+
+###################### KEGG PATHWAY PATHVIEW #############################
+library(pathview)
+
+no_dups <- tmp[!duplicated(tmp$geneName),]
+gene.data.2 <- subset(no_dups, select = "logFC")
+rownames(gene.data.2) <- no_dups$geneName
+head(gene.data.2)
+pv.out <- pathview(gene.data=gene.data.2, pathway.id="vvi00941", species="vvi", gene.idtype="KEGG", kegg.native=T)
+pv.out <- pathview(gene.data=gene.data.2, pathway.id="vvi00480", species="vvi", gene.idtype="KEGG", kegg.native=T)
