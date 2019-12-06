@@ -88,5 +88,10 @@ no_dups <- tmp[!duplicated(tmp$geneName),]
 gene.data.2 <- subset(no_dups, select = "logFC")
 rownames(gene.data.2) <- no_dups$geneName
 head(gene.data.2)
-pv.out <- pathview(gene.data=gene.data.2, pathway.id="vvi00941", species="vvi", gene.idtype="KEGG", kegg.native=T)
-pv.out <- pathview(gene.data=gene.data.2, pathway.id="vvi00480", species="vvi", gene.idtype="KEGG", kegg.native=T)
+# Create directory for kegg temp files
+dir.create(file.path("temp_kegg"), showWarnings = FALSE)
+#Create pathways
+pv.out <- pathview(gene.data=gene.data.2, pathway.id="vvi00941", species="vvi", gene.idtype="KEGG", kegg.native=T, kegg.dir = "temp_kegg")
+pv.out <- pathview(gene.data=gene.data.2, pathway.id="vvi00480", species="vvi", gene.idtype="KEGG", kegg.native=T, kegg.dir = "temp_kegg")
+# Delete kegg temp files
+unlink("temp_kegg", recursive = TRUE)

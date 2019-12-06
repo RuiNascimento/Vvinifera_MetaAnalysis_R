@@ -11,6 +11,7 @@ data/
 server/
 expression/
 ref_index/
+temp_kegg/
 
 #Other stuff
 *.xml
