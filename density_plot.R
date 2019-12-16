@@ -37,21 +37,21 @@ final <- merge.data.table(x = df, y = pinot, by = "Run")
 # By Layout
 final %>%
 ggplot(aes(x = Run, y = Counts, fill = LibraryLayout)) + geom_boxplot() + xlab("") +
-  ylab(expression(log[2](normalized_counts))) + scale_fill_manual(values = c("#619CFF", "#F564E3")) +
+  ylab(expression(log[2](normalized_counts))) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   ggtitle("Raw Counts by Lybrary Layout")
 
 # By Stress
 final %>%
   ggplot(aes(x = Run, y = Counts, fill = Stress)) + geom_boxplot() + xlab("") +
-  ylab(expression(log[2](normalized_counts))) + # scale_fill_manual(values = c("#619CFF", "#F564E3")) +
+  ylab(expression(log[2](normalized_counts))) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   ggtitle("Raw Counts by Stress")
 
 # By BioProject
 final %>%
   ggplot(aes(x = Run, y = Counts, fill = BioProject)) + geom_boxplot() + xlab("") +
-  ylab(expression(log[2](normalized_counts))) + # scale_fill_manual(values = c("#619CFF", "#F564E3")) +
+  ylab(expression(log[2](normalized_counts))) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   ggtitle("Raw Counts by Bioproject")
 
@@ -72,21 +72,21 @@ final_norm <- merge.data.table(x = df_cpm, y = pinot, by = "Run")
 # By Layout
 final_norm %>%
 ggplot(aes(x = Run, y = Counts, fill = LibraryLayout)) + geom_boxplot() + xlab("") +
-  ylab(expression(log[2](normalized_counts))) + scale_fill_manual(values = c("#619CFF", "#F564E3")) +
+  ylab(expression(log[2](normalized_counts))) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   ggtitle("Normalized Counts by Lybrary Layout")
 
 # By Stress
 final_norm %>%
   ggplot(aes(x = Run, y = Counts, fill = Stress)) + geom_boxplot() + xlab("") +
-  ylab(expression(log[2](normalized_counts))) + # scale_fill_manual(values = c("#619CFF", "#F564E3")) +
+  ylab(expression(log[2](normalized_counts))) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   ggtitle("Normalized Counts by Stress")
 
 # By BioProject
 final_norm %>%
   ggplot(aes(x = Run, y = Counts, fill = BioProject)) + geom_boxplot() + xlab("") +
-  ylab(expression(log[2](normalized_counts))) + # scale_fill_manual(values = c("#619CFF", "#F564E3")) +
+  ylab(expression(log[2](normalized_counts))) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   ggtitle("Normalized Counts by Bioproject")
 
