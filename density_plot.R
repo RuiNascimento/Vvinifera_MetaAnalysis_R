@@ -21,13 +21,17 @@ boxplot(log(counts_data))
 
 # True Plots below
 
+# talvez usar log2(counts_data+1) para ficar sem zeros??
+
 log_counts_data <- log2(counts_data)
 
-df <- melt(data = log_counts_data, value.name = "Counts")
+df <- data.table::melt(data = log_counts_data,
+           value.name = "Counts",
+           variable.name = "Run",
+           measure.vars = names(counts_data))
 
-setnames(df, "variable", "Run")
-
-pinot$Run <- rownames(pinot)
+metadata <- data.table(pinot, keep.rownames = TRUE)
+setnames(metadata, "rn", "Run")
 
 final <- merge.data.table(x = df, y = pinot, by = "Run")
 
@@ -37,21 +41,21 @@ final <- merge.data.table(x = df, y = pinot, by = "Run")
 # By Layout
 final %>%
 ggplot(aes(x = Run, y = Counts, fill = LibraryLayout)) + geom_boxplot() + xlab("") +
-  ylab(expression(log[2](normalized_counts))) +
+  ylab(expression(log[2](raw_counts))) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   ggtitle("Raw Counts by Lybrary Layout")
 
 # By Stress
 final %>%
   ggplot(aes(x = Run, y = Counts, fill = Stress)) + geom_boxplot() + xlab("") +
-  ylab(expression(log[2](normalized_counts))) +
+  ylab(expression(log[2](raw_counts))) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   ggtitle("Raw Counts by Stress")
 
 # By BioProject
 final %>%
   ggplot(aes(x = Run, y = Counts, fill = BioProject)) + geom_boxplot() + xlab("") +
-  ylab(expression(log[2](normalized_counts))) +
+  ylab(expression(log[2](raw_counts))) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   ggtitle("Raw Counts by Bioproject")
 
