@@ -1,3 +1,14 @@
+---
+title: "Read Raw Data"
+author: "Rui Nascimento"
+date: "`r format(Sys.time(), '%d %B, %Y (%X)')`"
+output: html_document
+---
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
 library("devtools")
 library("AnnotationDbi")
 library("org.Vvinifera.eg.db")
@@ -68,11 +79,10 @@ dim(dge) # number of genes left
 plotMDS(dge)
 
 logcpm <- cpm(dge, prior.count=2, log=TRUE)
+saveRDS(logcpm, file = "data/logcpm.RDS")
 
 # Differential expression using : voom
 v <- voom(dge, design=design, plot=TRUE)
-# dev.off()
-
 
 # The usual limma pipelines for differential expression
 
@@ -85,6 +95,7 @@ top25 <- topTable(fit, coef=2,  sort.by = "logFC", number = 25)
 # Plasmopara[Plasmopara$P.Value < 0.05,]
 
 write.table(Plasmopara, file = "Plasmopara.tsv", sep = "\t")
+saveRDS(Plasmopara, file = "data/plasmopara.RDS")
 
 # HeatMap top 25
 heatmap.2(logcpm[rownames(top25),],col=brewer.pal(11,"RdBu"),scale="row", trace="none")

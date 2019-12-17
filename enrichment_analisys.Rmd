@@ -1,3 +1,14 @@
+---
+title: "Read Raw Data"
+author: "Rui Nascimento"
+date: "`r format(Sys.time(), '%d %B, %Y (%X)')`"
+output: html_document
+---
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
 ########### GO  Enrichment analisys ##################
 
 library(topGO)
@@ -6,8 +17,10 @@ library(org.Vvinifera.eg.db)
 
 setwd("~/Documentos/Vitis_Meta_analysis")
 
-infile <- "expression/htseq-count/Plasmopara.tsv" 
-tmp <- read.delim(infile)
+#infile <- "expression/htseq-count/Plasmopara.tsv" 
+#tmp <- read.delim(infile)
+
+tmp <- readRDS(file = "data/plasmopara.RDS")
 
 # Create collumn with the geneID, from the rowname
 tmp$geneName <- substring(sub("\\,.+","",rownames(tmp)),8)
