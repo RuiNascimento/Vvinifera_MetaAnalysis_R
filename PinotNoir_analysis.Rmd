@@ -1,0 +1,468 @@
+---
+title: "Pinot Noir - RNA Seq Analysis"
+author: "Rui Nascimento"
+date: "`r format(Sys.time(), '%d %B, %Y (%X)')`"
+output:
+  html_document:
+    theme: united
+    highlight: tango
+    toc: true
+    toc_depth: 3
+    toc_float:
+      collapsed: false
+      smooth_scroll: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# My limma pipeline
+
+Load required packages
+
+```{r loadLibs, warning=FALSE, message=FALSE}
+library("devtools")
+library("AnnotationDbi")
+library("org.Vvinifera.eg.db")
+library("limma")
+library("edgeR")
+library("RColorBrewer")
+library("gplots")
+library(data.table)
+library(ggplot2)
+library(magrittr)
+library(topGO)
+library(KEGGREST)
+library(org.Vvinifera.eg.db)
+library(pathview)
+```
+
+## Load the dataset
+
+```{r loadData}
+out.file <- readRDS(file = "data/out.file.RDS")
+```
+
+Dataframe in proper conditions and fix colnames to be RUN
+
+```{r setupData}
+counts_data <- data.frame(out.file[,-1], row.names=out.file[,1])
+colnames(counts_data) <- sub('_counts','',colnames(counts_data))
+```
+
+## Load the Metadata
+
+Load phenotype table, with RUN collum as row.names
+Used read.delim insted of read.table, because read.table refused to read all the rows
+
+```{r loadMetadata}
+conditions <- read.delim("expression/htseq-count/phenotype_global.tsv", sep = "\t", header = TRUE, row.names = 22, stringsAsFactors = F)
+pinot <- conditions[conditions$Vitis.Genotype == "Vitis vinifera Pinot Noir" & conditions$Tissue == "leaves",]
+```
+
+
+### Correct the metadata
+
+To reduce the number of variables
+
+```{r fixMetadata}
+unique(pinot$Stress)
+pinot$Stress[pinot$Stress == ""] <- "Control"
+pinot$Stress[pinot$Stress == "Constitutive"] <- "Control"
+pinot$Stress[pinot$Stress == "drought"] <- "Water deficit"
+unique(pinot$Stress)
+
+unique(pinot$Tissue)
+pinot$Tissue[pinot$Tissue == "pericarp"] <- "berry"
+unique(pinot$Tissue)
+```
+
+
+Set `Control` as default level, facilitates data analysis downstream
+
+```{r fixMetadata2}
+pinot$Stress <- relevel(factor(pinot$Stress), ref = "Control")
+saveRDS(pinot, file = "data/pinot.RDS")
+```
+
+
+# Raw Data Plots
+
+Load Raw counts_data from .RDS file and melt the dataset
+
+```{r rawDataPlots}
+counts_data <- readRDS("data/counts_data.RDS")
+
+log_counts_data <- log2(counts_data)
+
+df <- data.table::melt(data = log_counts_data,
+           value.name = "Counts",
+           variable.name = "Run",
+           measure.vars = names(counts_data))
+
+metadata <- data.table(readRDS("data/pinot.RDS"), keep.rownames = TRUE)
+setnames(metadata, "rn", "Run")
+
+final <- data.table(merge.data.table(x = df, y = metadata, by = "Run"))
+```
+
+## By LibLayout
+
+Raw counts colored by LibLayout
+
+```{r rawLibLayout}
+final %>%
+ggplot(aes(x = Run, y = Counts, fill = LibraryLayout)) + geom_boxplot() + xlab("") +
+  ylab(expression(log[2](raw_counts))) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("Raw Counts by Lybrary Layout")
+```
+
+## By Stress
+
+Raw counts colored by Stress
+
+```{r rawStress}
+final %>%
+  ggplot(aes(x = Run, y = Counts, fill = Stress)) + geom_boxplot() + xlab("") +
+  ylab(expression(log[2](raw_counts))) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("Raw Counts by Stress")
+```
+
+## By BioProject
+
+Raw counts colored by BioProject
+
+```{r rawBioProject}
+final %>%
+  ggplot(aes(x = Run, y = Counts, fill = BioProject)) + geom_boxplot() + xlab("") +
+  ylab(expression(log[2](raw_counts))) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("Raw Counts by Bioproject")
+```
+
+## Density
+
+```{r rawDensity}
+final %>%
+  ggplot(aes(x = Counts, colour = Run, fill = Run)) +
+  geom_density(alpha = 0.1) +
+  theme(legend.position = "none") + xlab(expression(log[2](count + 1))) +
+  labs(title="Density Plot of Raw Counts")
+```
+
+# Normalized data Plots
+
+Read normalized counts with limma-voom
+
+```{r loadNormData}
+logcpm <- readRDS(file = "data/logcpm.RDS")
+```
+
+Melt the dataset
+
+```{r setupNormData}
+df_cpm <- data.table::melt(data = logcpm,
+                       value.name = "Counts",
+                       variable.name = "Run",
+                       measure.vars = names(logcpm))
+setnames(df_cpm, c("Var1", "Var2"), c("ID", "Run"))
+final_norm <- data.table(merge.data.table(x = df_cpm, y = metadata, by = "Run"))
+```
+
+## By LibLayout
+
+Normalized counts colored by LibLayout
+
+```{r normLibLayout}
+final_norm %>%
+ggplot(aes(x = Run, y = Counts, fill = LibraryLayout)) + geom_boxplot() + xlab("") +
+  ylab(expression(normalied_counts)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("Normalized Counts by Lybrary Layout")
+```
+
+## By Stress
+
+Normalized counts colored by Stress
+
+```{r normStress}
+final_norm %>%
+  ggplot(aes(x = Run, y = Counts, fill = Stress)) + geom_boxplot() + xlab("") +
+  ylab(expression(normalied_counts)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("Normalized Counts by Stress")
+```
+
+## By BioProject
+
+Normalized counts colored by Bioproject
+
+```{r normBioProject}
+final_norm %>%
+  ggplot(aes(x = Run, y = Counts, fill = BioProject)) + geom_boxplot() + xlab("") +
+  ylab(expression(normalied_counts)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("Normalized Counts by Bioproject")
+```
+
+## Density
+
+```{r normDensity}
+final_norm %>%
+  ggplot(aes(x = Counts, colour = BioProject, fill = Run)) +
+  geom_density(alpha = 0.1) +
+  theme(legend.position = "none") + xlab(expression(normalied_counts)) +
+  labs(title="Density Plot of Normalized Counts")
+```
+
+### Random Number of Runs
+
+Density Plot with 10 random Runs
+
+```{r randomDensity}
+number_of_samples = 10
+
+final_norm[Run %in% sample(unique(final_norm$Run), number_of_samples)] %>%
+  ggplot(aes(x = Counts, colour = Run, fill = BioProject)) +
+  geom_density(alpha = 0.1) +
+  theme(legend.position = "right") + xlab(expression(normalied_counts)) +
+  labs(title="Density Plot of Normalized Counts")
+```
+
+## Create the design
+
+```{r design}
+design <- model.matrix(~ Stress, data = pinot)
+```
+
+## Subset the data
+
+Subset the dataset to the samples in the design.
+
+```{r subsetData}
+counts_data <- subset(counts_data, select = rownames(design))
+saveRDS(counts_data, file = "data/counts_data.RDS")
+```
+
+## DGEList object
+
+Create DGEList object with the edgeR package.
+
+```{r}
+dge <- DGEList(counts = counts_data)
+```
+
+## Remove low counts
+
+Remove rows that consistently have zero or very low counts.
+
+```{r}
+keep <- filterByExpr(dge, design)
+dge <- dge[keep,,keep.lib.sizes=FALSE]
+```
+
+## TMM normalization
+
+Apply scale normalization to RNA-seq read counts with the TMM normalization method
+
+```{r}
+dge <- calcNormFactors(dge)
+
+```
+
+## Remove low counts genes
+
+```{r}
+cutoff <- 4
+drop <- which(apply(cpm(dge), 1, max) < cutoff)
+dge <- dge[-drop,] 
+dim(dge) # number of genes left
+```
+
+## Plot MDS
+
+```{r}
+plotMDS(dge)
+```
+
+## Log transform the data
+
+```{r}
+logcpm <- cpm(dge, prior.count=2, log=TRUE)
+saveRDS(logcpm, file = "data/logcpm.RDS")
+```
+
+## Voom DE
+
+Differential expression using Voom.
+
+```{r}
+v <- voom(dge, design=design, plot=TRUE)
+```
+
+## Limma DE pipeline
+
+The usual limma pipelines for differential expression
+
+```{r}
+fit <- lmFit(v, design)
+fit <- eBayes(fit)
+# Coef = 2 genes modulated when infected with plasmopara viticola
+Plasmopara <- topTable(fit, coef=2,  sort.by = "logFC", number = length(fit$sigma))
+
+top25 <- topTable(fit, coef=2,  sort.by = "logFC", number = 25)
+# Plasmopara[Plasmopara$P.Value < 0.05,]
+
+write.table(Plasmopara, file = "Plasmopara.tsv", sep = "\t")
+saveRDS(Plasmopara, file = "data/plasmopara.RDS")
+
+top25
+```
+
+
+## HeatMap top 25
+
+```{r}
+heatmap.2(logcpm[rownames(top25),],col=brewer.pal(11,"RdBu"),scale="row", trace="none")
+```
+
+# GO  Enrichment analisys
+
+## Load the Data
+
+```{r}
+tmp <- readRDS(file = "data/plasmopara.RDS")
+```
+
+## Process the Data
+
+Create collumn with the geneID, from the rowname
+
+```{r}
+tmp$geneName <- substring(sub("\\,.+","",rownames(tmp)),8)
+```
+
+Create an object (geneList) with the values of the p.value and the names as the GeneNamers
+
+```{r}
+geneList <- tmp$P.Value
+names(geneList) <- tmp$geneName
+```
+
+## Create topGOData object
+
+Tive de modificar o org.Vvinifera.eg.db manualmente para funcionar
+
+```{r}
+GOdata <- new("topGOdata",
+              ontology = "BP",
+              allGenes = geneList,
+              geneSelectionFun = function(x)x,
+              annot = annFUN.org , mapping = "org.Vvinifera.eg.db",
+              ID = "entrez")
+```
+
+## Run the test
+
+```{r}
+resultKS <- runTest(GOdata, algorithm = "weight01", statistic = "ks")
+
+tab <- GenTable(GOdata, raw.p.value = resultKS, topNodes = length(resultKS@score), numChar = 120)
+
+head(tab, 15)
+
+par(cex = 0.6)
+showSigOfNodes(GOdata, score(resultKS), firstSigNodes = 5, useInfo = "def")
+par(cex = 1)
+```
+
+# KEGG Pathway Analysis
+
+```{r}
+pathways.list <- keggList("pathway", "vvi")
+head(pathways.list)
+pathway.codes <- sub("path:", "", names(pathways.list))
+genes.by.pathway <- sapply(pathway.codes,
+                           function(pwid){
+                             pw <- keggGet(pwid)
+                             if (is.null(pw[[1]]$GENE)) return(NA)
+                             pw2 <- pw[[1]]$GENE[c(TRUE,FALSE)] # may need to modify this to c(FALSE, TRUE) for other organisms
+                             pw2 <- unlist(lapply(strsplit(pw2, split = ";", fixed = T), function(x)x[1]))
+                             return(pw2)
+                           }
+)
+head(genes.by.pathway)
+head(geneList)
+```
+
+
+## Wilcox Test
+
+Wilcox test for each pathway
+
+```{r}
+pVals.by.pathway <- t(sapply(names(genes.by.pathway),
+                             function(pathway) {
+                               pathway.genes <- genes.by.pathway[[pathway]]
+                               list.genes.in.pathway <- intersect(names(geneList), pathway.genes)
+                               list.genes.not.in.pathway <- setdiff(names(geneList), list.genes.in.pathway)
+                               scores.in.pathway <- geneList[list.genes.in.pathway]
+                               scores.not.in.pathway <- geneList[list.genes.not.in.pathway]
+                               if (length(scores.in.pathway) > 0){
+                                 p.value <- wilcox.test(scores.in.pathway, scores.not.in.pathway, alternative = "less")$p.value
+                               } else{
+                                 p.value <- NA
+                               }
+                               return(c(p.value = p.value, Annotated = length(list.genes.in.pathway)))
+                             }
+))
+```
+
+## Assemble output table
+
+```{r}
+outdat <- data.frame(pathway.code = rownames(pVals.by.pathway))
+outdat$pathway.name <- pathways.list[outdat$pathway.code]
+outdat$p.value <- pVals.by.pathway[,"p.value"]
+outdat$Annotated <- pVals.by.pathway[,"Annotated"]
+outdat <- outdat[order(outdat$p.value),]
+head(outdat, 10)
+```
+
+
+# KEGG Pathway Pathview
+
+Remove duplicated gene names
+
+```{r removeDups}
+no_dups <- tmp[!duplicated(tmp$geneName),]
+gene.data.2 <- subset(no_dups, select = "logFC")
+rownames(gene.data.2) <- no_dups$geneName
+head(gene.data.2)
+```
+
+Create directory for kegg temp files
+
+```{r createDir}
+dir.create(file.path("temp_kegg"), showWarnings = FALSE)
+```
+
+## Create pathways
+
+KEGG Pathways with gene expression data
+
+```{r pathview, warning=FALSE}
+pv.out <- pathview(gene.data=gene.data.2, pathway.id="vvi00941", species="vvi", gene.idtype="KEGG", kegg.native=T, kegg.dir = "temp_kegg")
+pv.out <- pathview(gene.data=gene.data.2, pathway.id="vvi00480", species="vvi", gene.idtype="KEGG", kegg.native=T, kegg.dir = "temp_kegg")
+```
+![Pathway vvi00941](vvi00941.pathview.png)
+![Pathway vvi00480](vvi00480.pathview.png)
+
+Delete kegg temp files
+
+```{r removeKegg}
+unlink("temp_kegg", recursive = TRUE)
+```
