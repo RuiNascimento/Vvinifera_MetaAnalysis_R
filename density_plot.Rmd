@@ -36,9 +36,6 @@ setnames(metadata, "rn", "Run")
 final <- data.table(merge.data.table(x = df, y = metadata, by = "Run"))
 ```
 
-
-
-
 ## By LibLayout
 
 Raw counts colored by LibLayout
@@ -104,7 +101,6 @@ setnames(df_cpm, c("Var1", "Var2"), c("ID", "Run"))
 final_norm <- data.table(merge.data.table(x = df_cpm, y = metadata, by = "Run"))
 ```
 
-
 ## By LibLayout
 
 Normalized counts colored by LibLayout
@@ -150,7 +146,6 @@ final_norm %>%
   theme(legend.position = "none") + xlab(expression(normalied_counts)) +
   labs(title="Density Plot of Normalized Counts")
 ```
-
 
 ## Plot a Random number of Runs
 

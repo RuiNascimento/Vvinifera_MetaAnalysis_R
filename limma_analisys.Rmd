@@ -9,33 +9,47 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+# My limma pipeline
+
+Load required packages
+
+```{r loadLibs, warning=FALSE, message=FALSE}
 library("devtools")
 library("AnnotationDbi")
 library("org.Vvinifera.eg.db")
-
-#My limma pipeline
-setwd("~/Documentos/Vitis_Meta_analysis")
-
-out.file <- readRDS(file = "data/out.file.RDS")
-
 library("limma")
 library("edgeR")
 library("RColorBrewer")
 library("gplots")
+```
 
-# Dataframe in proper conditions
+## Load the dataset
+
+```{r}
+out.file <- readRDS(file = "data/out.file.RDS")
+```
+
+Dataframe in proper conditions and fix colnames to be RUN
+
+```{r}
 counts_data <- data.frame(out.file[,-1], row.names=out.file[,1])
-# Fix colnames to be RUN
 colnames(counts_data) <- sub('_counts','',colnames(counts_data))
+```
 
-# Load phenotype table, with RUN collum as row.names
-# Use read.delim insted of read.table, because read.table refused to read all the rows
+## Load the Metadata
+
+Load phenotype table, with RUN collum as row.names
+Used read.delim insted of read.table, because read.table refused to read all the rows
+
+```{r}
 conditions <- read.delim("expression/htseq-count/phenotype_global.tsv", sep = "\t", header = TRUE, row.names = 22, stringsAsFactors = F)
-
 pinot <- conditions[conditions$Vitis.Genotype == "Vitis vinifera Pinot Noir" & conditions$Tissue == "leaves",]
+```
 
-#############################################################
-# Try to correct some of the metadata
+
+### Try to correct some of the metadata
+
+```{r}
 unique(pinot$Stress)
 pinot$Stress[pinot$Stress == ""] <- "Control"
 pinot$Stress[pinot$Stress == "Constitutive"] <- "Control"
@@ -45,47 +59,85 @@ unique(pinot$Stress)
 unique(pinot$Tissue)
 pinot$Tissue[pinot$Tissue == "pericarp"] <- "berry"
 unique(pinot$Tissue)
+```
 
-#############################################################
 
-# Set "Control" as default level, facilitates data analysis downstream
+Set `Control` as default level, facilitates data analysis downstream
+
+```{r}
 pinot$Stress <- relevel(factor(pinot$Stress), ref = "Control")
+saveRDS(pinot, file = "data/pinot.RDS")
+```
 
+## Create the design
+
+```{r}
 design <- model.matrix(~ Stress, data = pinot)
+```
 
-# Create a new counts_data to conform to the design samples, this will help if we want to subset the data
+## Subset the data
 
+Subset the dataset to the samples in the design
+
+```{r}
 counts_data <- subset(counts_data, select = rownames(design))
+saveRDS(counts_data, file = "data/counts_data.RDS")
+```
 
-# Create DGEList object with the edgeR package
+## Create DGEList object with the edgeR package
 
+```{r}
 dge <- DGEList(counts = counts_data)
+```
 
-# Remove  rows  that  consistently  have  zero  or  very  low  counts
+## Remove  rows  that  consistently  have  zero  or  very  low  counts
+```{r}
 keep <- filterByExpr(dge, design)
 dge <- dge[keep,,keep.lib.sizes=FALSE]
+```
 
-# apply scale normalization to RNA-seq read counts with the TMM normalization method
+## TMM normalization
 
+Apply scale normalization to RNA-seq read counts with the TMM normalization method
+
+```{r}
 dge <- calcNormFactors(dge)
 
-# Remove low counts genes
+```
+
+## Remove low counts genes
+
+```{r}
 cutoff <- 4
 drop <- which(apply(cpm(dge), 1, max) < cutoff)
 dge <- dge[-drop,] 
 dim(dge) # number of genes left
+```
 
-# Plot MDS
+## Plot MDS
+
+```{r}
 plotMDS(dge)
+```
 
+## Log transform the data
+
+```{r}
 logcpm <- cpm(dge, prior.count=2, log=TRUE)
 saveRDS(logcpm, file = "data/logcpm.RDS")
+```
 
-# Differential expression using : voom
+## Differential expression using : voom
+
+```{r}
 v <- voom(dge, design=design, plot=TRUE)
+```
 
-# The usual limma pipelines for differential expression
+## Limma DE pipeline
 
+The usual limma pipelines for differential expression
+
+```{r}
 fit <- lmFit(v, design)
 fit <- eBayes(fit)
 # Coef = 2 genes modulated when infected with plasmopara viticola
@@ -97,6 +149,13 @@ top25 <- topTable(fit, coef=2,  sort.by = "logFC", number = 25)
 write.table(Plasmopara, file = "Plasmopara.tsv", sep = "\t")
 saveRDS(Plasmopara, file = "data/plasmopara.RDS")
 
-# HeatMap top 25
+top25
+```
+
+
+## HeatMap top 25
+
+```{r}
 heatmap.2(logcpm[rownames(top25),],col=brewer.pal(11,"RdBu"),scale="row", trace="none")
+```
 
