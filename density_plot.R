@@ -33,7 +33,7 @@ df <- data.table::melt(data = log_counts_data,
 metadata <- data.table(pinot, keep.rownames = TRUE)
 setnames(metadata, "rn", "Run")
 
-final <- merge.data.table(x = df, y = pinot, by = "Run")
+final <- data.table(merge.data.table(x = df, y = metadata, by = "Run"))
 
 
 # Plot expeiment
@@ -68,29 +68,33 @@ final %>%
 
 # Experiment 2 (normalized counts with limma)
 
-df_cpm <- melt(data = logcpm, value.name = "Counts")
-setnames(df_cpm, "Var2", "Run")
-final_norm <- merge.data.table(x = df_cpm, y = pinot, by = "Run")
+df_cpm <- data.table::melt(data = logcpm,
+                       value.name = "Counts",
+                       variable.name = "Run",
+                       measure.vars = names(logcpm))
+
+setnames(df_cpm, c("Var1", "Var2"), c("ID", "Run"))
+final_norm <- data.table(merge.data.table(x = df_cpm, y = metadata, by = "Run"))
 # final_norm <- data.table(final_norm)
 
 # By Layout
 final_norm %>%
 ggplot(aes(x = Run, y = Counts, fill = LibraryLayout)) + geom_boxplot() + xlab("") +
-  ylab(expression(log[2](normalized_counts))) +
+  ylab(expression(normalied_counts)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   ggtitle("Normalized Counts by Lybrary Layout")
 
 # By Stress
 final_norm %>%
   ggplot(aes(x = Run, y = Counts, fill = Stress)) + geom_boxplot() + xlab("") +
-  ylab(expression(log[2](normalized_counts))) +
+  ylab(expression(normalied_counts)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   ggtitle("Normalized Counts by Stress")
 
 # By BioProject
 final_norm %>%
   ggplot(aes(x = Run, y = Counts, fill = BioProject)) + geom_boxplot() + xlab("") +
-  ylab(expression(log[2](normalized_counts))) +
+  ylab(expression(normalied_counts)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   ggtitle("Normalized Counts by Bioproject")
 
@@ -98,9 +102,19 @@ final_norm %>%
 final_norm %>%
   ggplot(aes(x = Counts, colour = BioProject, fill = Run)) +
   geom_density(alpha = 0.1) +
-  theme(legend.position = "none") + xlab(expression(log[2](count + 1))) +
+  theme(legend.position = "none") + xlab(expression(normalied_counts)) +
   labs(title="Density Plot of Normalized Counts")
 
+
+# Plot a Random number of Runs
+
+number_of_samples = 10
+
+final_norm[Run %in% sample(unique(final_norm$Run), number_of_samples)] %>%
+  ggplot(aes(x = Counts, colour = Run, fill = BioProject)) +
+  geom_density(alpha = 0.1) +
+  theme(legend.position = "right") + xlab(expression(normalied_counts)) +
+  labs(title="Density Plot of Normalized Counts")
 
 # final_norm <- data.table(final_norm)
 # final_norm[BioProject == "PRJNA381300",]
