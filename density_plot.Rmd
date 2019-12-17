@@ -2,7 +2,18 @@
 title: "Data Exploration Plots"
 author: "Rui Nascimento"
 date: "`r format(Sys.time(), '%d %B, %Y (%X)')`"
-output: html_document
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+  html_document:
+    highlight: tango
+    theme: united
+    toc: yes
+    toc_depth: 3
+    toc_float:
+      collapsed: no
+      smooth_scroll: no
 ---
   
 ```{r setup, include=FALSE}
@@ -16,7 +27,7 @@ library(ggplot2)
 library(magrittr)
 ```
 
-# Raw Data Plots for data exploration
+# Raw Data Plots
 
 Load Raw counts_data from .RDS file and melt the dataset
 
@@ -82,9 +93,9 @@ final %>%
   labs(title="Density Plot of Raw Counts")
 ```
 
-# Normalized counts with limma-voom
+# Normalized data Plots
 
-Read normalized counts
+Read normalized counts with limma-voom
 
 ```{r}
 logcpm <- readRDS(file = "data/logcpm.RDS")
