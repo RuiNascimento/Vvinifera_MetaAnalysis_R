@@ -15,6 +15,7 @@ Get list of all files in directory
 
 ```{r listFiles}
 files <- list.files(path="expression/htseq-count/", pattern="_counts")
+head(files)
 ```
 
 Merge the first to files and store
@@ -24,8 +25,6 @@ file1 <- read.table(paste0("expression/htseq-count/",files[1]), col.names=c("id"
 file2 <- read.table(paste0("expression/htseq-count/",files[2]), col.names=c("id",tools::file_path_sans_ext(files[2])))
 out.file <- merge (file1, file2, by=c("id"))
 ```
-
-
 
 For loop to merge contents of remaining files
 
