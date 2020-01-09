@@ -3,14 +3,17 @@ title: "Pinot Noir - RNA Seq Analysis"
 author: "Rui Nascimento"
 date: "`r format(Sys.time(), '%d %B, %Y (%X)')`"
 output:
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
   html_document:
-    theme: united
     highlight: tango
-    toc: true
+    theme: united
+    toc: yes
     toc_depth: 3
     toc_float:
-      collapsed: false
-      smooth_scroll: false
+      collapsed: no
+      smooth_scroll: no
 ---
 
 ```{r setup, include=FALSE}
