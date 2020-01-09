@@ -86,8 +86,21 @@ pinot$Stress <- relevel(factor(pinot$Stress), ref = "Control")
 saveRDS(pinot, file = "data/pinot.RDS")
 ```
 
+## Create the design
 
-# Raw Data Plots
+```{r design}
+design <- model.matrix(~ Stress, data = pinot)
+```
+
+## Subset the data
+
+Subset the dataset to the samples in the design.
+
+```{r subsetData}
+counts_data <- subset(counts_data, select = rownames(design))
+saveRDS(counts_data, file = "data/counts_data.RDS")
+```
+## Raw Data Plots
 
 Load Raw counts_data from .RDS file and melt the dataset
 
@@ -107,7 +120,7 @@ setnames(metadata, "rn", "Run")
 final <- data.table(merge.data.table(x = df, y = metadata, by = "Run"))
 ```
 
-## By LibLayout
+### By LibLayout
 
 Raw counts colored by LibLayout
 
@@ -119,7 +132,7 @@ ggplot(aes(x = Run, y = Counts, fill = LibraryLayout)) + geom_boxplot() + xlab("
   ggtitle("Raw Counts by Lybrary Layout")
 ```
 
-## By Stress
+### By Stress
 
 Raw counts colored by Stress
 
@@ -131,7 +144,7 @@ final %>%
   ggtitle("Raw Counts by Stress")
 ```
 
-## By BioProject
+### By BioProject
 
 Raw counts colored by BioProject
 
@@ -143,7 +156,7 @@ final %>%
   ggtitle("Raw Counts by Bioproject")
 ```
 
-## Density
+### Density
 
 ```{r rawDensity}
 final %>%
@@ -153,99 +166,6 @@ final %>%
   labs(title="Density Plot of Raw Counts")
 ```
 
-# Normalized data Plots
-
-Read normalized counts with limma-voom
-
-```{r loadNormData}
-logcpm <- readRDS(file = "data/logcpm.RDS")
-```
-
-Melt the dataset
-
-```{r setupNormData}
-df_cpm <- data.table::melt(data = logcpm,
-                       value.name = "Counts",
-                       variable.name = "Run",
-                       measure.vars = names(logcpm))
-setnames(df_cpm, c("Var1", "Var2"), c("ID", "Run"))
-final_norm <- data.table(merge.data.table(x = df_cpm, y = metadata, by = "Run"))
-```
-
-## By LibLayout
-
-Normalized counts colored by LibLayout
-
-```{r normLibLayout}
-final_norm %>%
-ggplot(aes(x = Run, y = Counts, fill = LibraryLayout)) + geom_boxplot() + xlab("") +
-  ylab(expression(normalied_counts)) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ggtitle("Normalized Counts by Lybrary Layout")
-```
-
-## By Stress
-
-Normalized counts colored by Stress
-
-```{r normStress}
-final_norm %>%
-  ggplot(aes(x = Run, y = Counts, fill = Stress)) + geom_boxplot() + xlab("") +
-  ylab(expression(normalied_counts)) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ggtitle("Normalized Counts by Stress")
-```
-
-## By BioProject
-
-Normalized counts colored by Bioproject
-
-```{r normBioProject}
-final_norm %>%
-  ggplot(aes(x = Run, y = Counts, fill = BioProject)) + geom_boxplot() + xlab("") +
-  ylab(expression(normalied_counts)) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ggtitle("Normalized Counts by Bioproject")
-```
-
-## Density
-
-```{r normDensity}
-final_norm %>%
-  ggplot(aes(x = Counts, colour = BioProject, fill = Run)) +
-  geom_density(alpha = 0.1) +
-  theme(legend.position = "none") + xlab(expression(normalied_counts)) +
-  labs(title="Density Plot of Normalized Counts")
-```
-
-### Random Number of Runs
-
-Density Plot with 10 random Runs
-
-```{r randomDensity}
-number_of_samples = 10
-
-final_norm[Run %in% sample(unique(final_norm$Run), number_of_samples)] %>%
-  ggplot(aes(x = Counts, colour = Run, fill = BioProject)) +
-  geom_density(alpha = 0.1) +
-  theme(legend.position = "right") + xlab(expression(normalied_counts)) +
-  labs(title="Density Plot of Normalized Counts")
-```
-
-## Create the design
-
-```{r design}
-design <- model.matrix(~ Stress, data = pinot)
-```
-
-## Subset the data
-
-Subset the dataset to the samples in the design.
-
-```{r subsetData}
-counts_data <- subset(counts_data, select = rownames(design))
-saveRDS(counts_data, file = "data/counts_data.RDS")
-```
 
 ## DGEList object
 
@@ -282,10 +202,91 @@ dge <- dge[-drop,]
 dim(dge) # number of genes left
 ```
 
+## Normalized data Plots
+
+Read normalized counts with limma-voom
+
+```{r loadNormData}
+logcpm <- readRDS(file = "data/logcpm.RDS")
+```
+
+Melt the dataset
+
+```{r setupNormData}
+df_cpm <- data.table::melt(data = logcpm,
+                       value.name = "Counts",
+                       variable.name = "Run",
+                       measure.vars = names(logcpm))
+setnames(df_cpm, c("Var1", "Var2"), c("ID", "Run"))
+final_norm <- data.table(merge.data.table(x = df_cpm, y = metadata, by = "Run"))
+```
+
+### By LibLayout
+
+Normalized counts colored by LibLayout
+
+```{r normLibLayout}
+final_norm %>%
+ggplot(aes(x = Run, y = Counts, fill = LibraryLayout)) + geom_boxplot() + xlab("") +
+  ylab(expression(normalied_counts)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("Normalized Counts by Lybrary Layout")
+```
+
+### By Stress
+
+Normalized counts colored by Stress
+
+```{r normStress}
+final_norm %>%
+  ggplot(aes(x = Run, y = Counts, fill = Stress)) + geom_boxplot() + xlab("") +
+  ylab(expression(normalied_counts)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("Normalized Counts by Stress")
+```
+
+### By BioProject
+
+Normalized counts colored by Bioproject
+
+```{r normBioProject}
+final_norm %>%
+  ggplot(aes(x = Run, y = Counts, fill = BioProject)) + geom_boxplot() + xlab("") +
+  ylab(expression(normalied_counts)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("Normalized Counts by Bioproject")
+```
+
+### Density
+
+```{r normDensity}
+final_norm %>%
+  ggplot(aes(x = Counts, colour = BioProject, fill = Run)) +
+  geom_density(alpha = 0.1) +
+  theme(legend.position = "none") + xlab(expression(normalied_counts)) +
+  labs(title="Density Plot of Normalized Counts")
+```
+
+### Random Number of Runs
+
+Density Plot with 10 random Runs
+
+```{r randomDensity}
+number_of_samples = 10
+
+final_norm[Run %in% sample(unique(final_norm$Run), number_of_samples)] %>%
+  ggplot(aes(x = Counts, colour = Run, fill = BioProject)) +
+  geom_density(alpha = 0.1) +
+  theme(legend.position = "right") + xlab(expression(normalied_counts)) +
+  labs(title="Density Plot of Normalized Counts")
+```
+
+
 ## Plot MDS
 
 ```{r}
-plotMDS(dge)
+plotMDS(dge, main="MDS Plot of Raw Data")
+plotMDS(dge, main="MDS Plot by BioProject", labels = metadata[Run %in% colnames(dge), BioProject], col = as.numeric(factor(metadata[Run %in% colnames(dge), BioProject])))
 ```
 
 ## Log transform the data
@@ -314,7 +315,8 @@ fit <- eBayes(fit)
 Plasmopara <- topTable(fit, coef=2,  sort.by = "logFC", number = length(fit$sigma))
 
 top25 <- topTable(fit, coef=2,  sort.by = "logFC", number = 25)
-# Plasmopara[Plasmopara$P.Value < 0.05,]
+top300 <- topTable(fit, coef=2,  sort.by = "logFC", number = 300)
+dim(Plasmopara[Plasmopara$P.Value < 0.05,])
 
 write.table(Plasmopara, file = "Plasmopara.tsv", sep = "\t")
 saveRDS(Plasmopara, file = "data/plasmopara.RDS")
@@ -325,8 +327,13 @@ top25
 
 ## HeatMap top 25
 
+These heat maps are without batch correction, because limma dont give me data for the indivudual samples after the linear correction with covariates (batch effects).
+
 ```{r}
 heatmap.2(logcpm[rownames(top25),],col=brewer.pal(11,"RdBu"),scale="row", trace="none")
+cols2use <- metadata[Run %in% colnames(logcpm),][Stress %in% c("Control", "Plasmopara viticola"), Run]
+labCol <- metadata[Run %in% colnames(logcpm),][Stress %in% c("Control", "Plasmopara viticola"), Stress]
+heatmap.2(logcpm[rownames(top300),cols2use],col=brewer.pal(11,"RdBu"),scale="row", trace="none", labCol = labCol)
 ```
 
 # GO  Enrichment analisys
@@ -385,6 +392,12 @@ par(cex = 1)
 pathways.list <- keggList("pathway", "vvi")
 head(pathways.list)
 pathway.codes <- sub("path:", "", names(pathways.list))
+```
+
+
+Get genes in each kegg pathway
+```{r, eval=FALSE}
+# Only run with network access, otherwise skip and load local .RDS
 genes.by.pathway <- sapply(pathway.codes,
                            function(pwid){
                              pw <- keggGet(pwid)
@@ -394,7 +407,13 @@ genes.by.pathway <- sapply(pathway.codes,
                              return(pw2)
                            }
 )
-head(genes.by.pathway)
+saveRDS(genes.by.pathway, file = "data/genes.by.pathway.RDS")
+```
+
+
+```{r}
+genes.by.pathway <- readRDS("data/genes.by.pathway.RDS")
+head(genes.by.pathway, 2)
 head(geneList)
 ```
 
