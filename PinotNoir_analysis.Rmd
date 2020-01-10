@@ -535,8 +535,8 @@ head(outdat, 10)
 Remove duplicated gene names
 
 ```{r removeDups}
-no_dups <- tmp[!duplicated(tmp$geneName),]
-gene.data.2 <- data.frame(no_dups[,"logFC"])
+no_dups <- data.frame(tmp[!duplicated(tmp$geneName),])
+gene.data.2 <- subset(no_dups, select = "logFC")
 rownames(gene.data.2) <- no_dups$geneName
 head(gene.data.2)
 ```
