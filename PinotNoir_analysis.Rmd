@@ -39,6 +39,8 @@ library("topGO")
 library("KEGGREST")
 library("org.Vvinifera.eg.db")
 library("pathview")
+library("xlsx")
+library("stringr")
 ```
 
 ## Load the dataset
@@ -360,6 +362,7 @@ Create an object (geneList) with the values of the p.value and the names as the 
 ```{r}
 geneList <- tmp$adj.P.Val
 names(geneList) <- tmp$geneName
+tmp <- data.table(tmp)
 ```
 
 ## Create topGOData object
@@ -370,7 +373,7 @@ Tive de modificar o org.Vvinifera.eg.db manualmente para funcionar
 GOdata <- new("topGOdata",
               ontology = "BP",
               allGenes = geneList,
-              geneSelectionFun = function(x)x,
+              geneSelectionFun = function(x){ if (x<0.05) {return(x) }},
               annot = annFUN.org , mapping = "org.Vvinifera.eg.db",
               ID = "entrez")
 ```
@@ -381,12 +384,86 @@ GOdata <- new("topGOdata",
 resultKS <- runTest(GOdata, algorithm = "weight01", statistic = "ks")
 
 tab <- GenTable(GOdata, raw.p.value = resultKS, topNodes = length(resultKS@score), numChar = 120)
+# Convert p.value to numeric
+tab$raw.p.value <- as.numeric(tab$raw.p.value)
 
 head(tab, 15)
 
 par(cex = 0.6)
 showSigOfNodes(GOdata, score(resultKS), firstSigNodes = 5, useInfo = "def")
 par(cex = 1)
+```
+
+## Save GO Results
+
+Save GO results with expression data
+
+Define FoldChange to highlight in excel
+
+```{r}
+FC <- 1.5
+upreg <- paste0(">", log2(FC))
+downreg <- paste0("<-", log2(FC))
+```
+
+Create workbook to put data in
+
+```{r}
+fileName <- "go_results.xlsx"
+excel <- createWorkbook(fileName)
+```
+
+Set Styles
+
+```{r}
+negStyle <- createStyle(fontColour = "#9C0006", bgFill = "#FFC7CE")
+posStyle <- createStyle(fontColour = "#006100", bgFill = "#C6EFCE")
+```
+
+Create the Summary Page
+
+```{r}
+addWorksheet(excel, "Summary")
+writeData(tab[tab$raw.p.value < 0.05, ], wb = excel, sheet = "Summary", rowNames = FALSE)
+```
+
+For loop to generate the diferent dataframes and save to a list
+
+```{r}
+GoDF <- list()
+for (x in 1:sum(tab$raw.p.value < 0.05)) {
+  goID <- tab[x, "GO.ID"]
+  ids <- genesInTerm(GOdata, goID)
+  head(ids)
+  annot <- data.table(select(org.Vvinifera.eg.db, keys=ids[[1]], column=c("symbol", "gene_name"), keytype="gene_id"))
+  head(annot)
+  expVals <- tmp[geneName %in% annot$gene_id, ]
+  final_annot <- merge.data.table(annot, expVals, by.x ="gene_id", by.y = "geneName")
+  setorder(final_annot, P.Value)
+  GoDF[[goID]] <- final_annot
+}
+```
+
+For loop to add every sheet, every sheet is a GO_ID with a p.value < 0.05
+Add Hyperlinks to Summary Page
+Add conditional formating to highligh significant foldchange / p.values
+
+```{r}
+for (x in 1:sum(tab$raw.p.value < 0.05)) {
+  goID <- tab[x, "GO.ID"]
+  sheetname <- substring(tab[x, "GO.ID"], 4)
+  addWorksheet(excel, sheetname)
+  writeData(GoDF[[x]], wb = excel, sheet = sheetname, rowNames = FALSE)
+  writeFormula(excel, "Summary", startRow = x+1, 
+               x = makeHyperlinkString(sheet = sheetname, row = 1, col = 1
+                                       , text = goID))
+  conditionalFormatting(excel, sheetname, cols=4, rows=1:nrow(GoDF[[x]]), rule=upreg, style = posStyle)
+  conditionalFormatting(excel, sheetname, cols=4, rows=1:nrow(GoDF[[x]]), rule=downreg, style = posStyle)
+  conditionalFormatting(excel, sheetname, cols=7, rows=1:nrow(GoDF[[x]]), rule="<0.05", style = posStyle)
+  conditionalFormatting(excel, sheetname, cols=8, rows=1:nrow(GoDF[[x]]), rule="<0.05", style = posStyle)
+}
+
+saveWorkbook(excel, file = fileName, overwrite = TRUE)
 ```
 
 # KEGG Pathway Analysis
