@@ -532,13 +532,15 @@ head(outdat, 10)
 
 # KEGG Pathway Pathview
 
-Remove duplicated gene names
+Remove duplicated gene names.
+Choose only genes with adj.P.Val < 0.05
 
 ```{r removeDups}
-no_dups <- data.frame(tmp[!duplicated(tmp$geneName),])
+no_dups <- data.frame(tmp[!duplicated(tmp$geneName),][adj.P.Val < 0.05,])
 gene.data.2 <- subset(no_dups, select = "logFC")
 rownames(gene.data.2) <- no_dups$geneName
 head(gene.data.2)
+dim(gene.data.2)
 ```
 
 Create directory for kegg temp files
