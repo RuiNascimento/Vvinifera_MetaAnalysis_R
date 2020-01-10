@@ -3,9 +3,6 @@ title: "Pinot Noir - RNA Seq Analysis"
 author: "Rui Nascimento"
 date: "`r format(Sys.time(), '%d %B, %Y (%X)')`"
 output:
-  pdf_document:
-    toc: yes
-    toc_depth: '3'
   html_document:
     highlight: tango
     theme: united
@@ -14,6 +11,9 @@ output:
     toc_float:
       collapsed: no
       smooth_scroll: no
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
 ---
 
 ```{r setup, include=FALSE}
@@ -39,7 +39,7 @@ library("topGO")
 library("KEGGREST")
 library("org.Vvinifera.eg.db")
 library("pathview")
-library("xlsx")
+library("openxlsx")
 library("stringr")
 ```
 
@@ -396,9 +396,9 @@ par(cex = 1)
 
 ## Save GO Results
 
-Save GO results with expression data
+Save GO results with expression data.
 
-Define FoldChange to highlight in excel
+Define FoldChange to highlight in excel.
 
 ```{r}
 FC <- 1.5
@@ -406,30 +406,30 @@ upreg <- paste0(">", log2(FC))
 downreg <- paste0("<-", log2(FC))
 ```
 
-Create workbook to put data in
+Create excel workbook to put data in.
 
 ```{r}
 fileName <- "go_results.xlsx"
-excel <- createWorkbook(fileName)
+excel <- createWorkbook()
 ```
 
-Set Styles
+Set Styles.
 
 ```{r}
 negStyle <- createStyle(fontColour = "#9C0006", bgFill = "#FFC7CE")
 posStyle <- createStyle(fontColour = "#006100", bgFill = "#C6EFCE")
 ```
 
-Create the Summary Page
+Create the Summary Page.
 
 ```{r}
 addWorksheet(excel, "Summary")
 writeData(tab[tab$raw.p.value < 0.05, ], wb = excel, sheet = "Summary", rowNames = FALSE)
 ```
 
-For loop to generate the diferent dataframes and save to a list
+For loop to generate the diferent dataframes and save to a list.
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 GoDF <- list()
 for (x in 1:sum(tab$raw.p.value < 0.05)) {
   goID <- tab[x, "GO.ID"]
@@ -444,9 +444,9 @@ for (x in 1:sum(tab$raw.p.value < 0.05)) {
 }
 ```
 
-For loop to add every sheet, every sheet is a GO_ID with a p.value < 0.05
-Add Hyperlinks to Summary Page
-Add conditional formating to highligh significant foldchange / p.values
+For loop to add every sheet, every sheet is a GO_ID with a p.value < 0.05.
+Add Hyperlinks to Summary Page.
+Add conditional formating to highligh significant foldchange / p.values.
 
 ```{r}
 for (x in 1:sum(tab$raw.p.value < 0.05)) {
@@ -493,8 +493,6 @@ saveRDS(genes.by.pathway, file = "data/genes.by.pathway.RDS")
 
 ```{r}
 genes.by.pathway <- readRDS("data/genes.by.pathway.RDS")
-head(genes.by.pathway, 2)
-head(geneList)
 ```
 
 
@@ -538,7 +536,7 @@ Remove duplicated gene names
 
 ```{r removeDups}
 no_dups <- tmp[!duplicated(tmp$geneName),]
-gene.data.2 <- subset(no_dups, select = "logFC")
+gene.data.2 <- data.frame(no_dups[,"logFC"])
 rownames(gene.data.2) <- no_dups$geneName
 head(gene.data.2)
 ```
