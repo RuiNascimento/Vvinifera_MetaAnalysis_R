@@ -358,7 +358,7 @@ tmp$geneName <- substring(sub("\\,.+","",rownames(tmp)),8)
 Create an object (geneList) with the values of the p.value and the names as the GeneNamers
 
 ```{r}
-geneList <- tmp$P.Value
+geneList <- tmp$adj.P.Val
 names(geneList) <- tmp$geneName
 ```
 
