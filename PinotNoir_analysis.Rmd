@@ -373,7 +373,7 @@ Tive de modificar o org.Vvinifera.eg.db manualmente para funcionar
 GOdata <- new("topGOdata",
               ontology = "BP",
               allGenes = geneList,
-              geneSelectionFun = function(x){ if (x<0.05) {return(x) }},
+              geneSelectionFun = function(x) (x < 0.05),
               annot = annFUN.org , mapping = "org.Vvinifera.eg.db",
               ID = "entrez")
 ```
@@ -381,7 +381,7 @@ GOdata <- new("topGOdata",
 ## Run the test
 
 ```{r}
-resultKS <- runTest(GOdata, algorithm = "weight01", statistic = "ks")
+resultKS <- runTest(GOdata, algorithm = "elim", statistic = "fisher")
 
 tab <- GenTable(GOdata, raw.p.value = resultKS, topNodes = length(resultKS@score), numChar = 120)
 # Convert p.value to numeric
